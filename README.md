@@ -9,6 +9,7 @@ No Home Assistant. No cloud account. No MQTT. No Wi-Fi password in source code.
 I wrote this as the guide I wanted before opening the indoor unit.
 
 **Jump to:** [Shopping list](#shopping-list) | [Wiring](#wiring) |
+[Compatibility](#which-mini-splits-are-supported) |
 [Build and flash](#build-and-flash) | [Matter pairing](#first-boot-and-matter-pairing) |
 [Troubleshooting](#troubleshooting)
 
@@ -22,6 +23,30 @@ from the handheld remote are reported back through Matter.
 The Midea UART protocol has no dependable compressor-running signal. Heat or
 Cool therefore reports as active when selected; Auto, Off, Dry, and Fan-only
 appear idle.
+
+## Which mini-splits are supported
+
+This project is for **Midea-UART-compatible indoor units**: units with the
+low-voltage Smart Kit / Wi-Fi-dongle port that carries the Midea air-conditioner
+protocol at **9600 8N1**. It is not a universal mini-split controller.
+
+The intended, first-use target is the **Senville SENA/18HF** family. The bundled
+[MideaUART package's compatibility list](libraries/MideaUART/README.md) is
+explicitly incomplete, but names Midea, Electrolux, Qlima, Artel, Carrier,
+Comfee, Inventor, and Dimstal/Simando as supported brands. Many of those brands
+sell Midea-built units under their own names, so the **indoor unit electronics
+and Smart Kit port matter more than the badge**.
+
+| Situation | Expectation |
+| --- | --- |
+| Midea-built indoor unit with the same UART Smart Kit dongle/port | Likely compatible; verify wiring and test safely. |
+| A rebranded unit from one of the package's listed brands | Plausibly compatible, but not a guarantee for every model or production year. |
+| A port that is actual USB, a wired-wall-thermostat bus, or another proprietary connector | Not supported by this wiring or firmware. Do not connect it until you have confirmed it is the Midea UART Smart Kit port. |
+
+Mode, fan-speed, and swing hardware vary by indoor unit. Matter exposes the
+standard controls, but an option your particular head lacks may be ignored or
+reported differently by the unit. Start with Off, Cool, Heat, and setpoint
+changes; then try fan speed and each swing direction one at a time.
 
 ## The idea
 
