@@ -211,6 +211,15 @@ esp_err_t attributeUpdateCallback(
     return ESP_OK;
   }
 
+  // Matter may write SystemMode and a setpoint as separate transactions. Keep
+  // the requested values here before queueing the command so a following write
+  // cannot fall back to the previous (or startup-default) setpoint.
+  portENTER_CRITICAL(&sStateMutex);
+  sState.mode = state.mode;
+  sState.heatingSetpointC = state.heatingSetpointC;
+  sState.coolingSetpointC = state.coolingSetpointC;
+  portEXIT_CRITICAL(&sStateMutex);
+
   float target = 23.0f;
   if (state.mode == hvac::Mode::Heat) {
     target = state.heatingSetpointC;
@@ -219,7 +228,11 @@ esp_err_t attributeUpdateCallback(
   } else if (state.mode == hvac::Mode::Auto) {
     target = (state.heatingSetpointC + state.coolingSetpointC) / 2.0f;
   }
-  sHvac->queueCommand(state.mode, std::clamp(target, kMinTargetC, kMaxTargetC));
+  target = std::clamp(target, kMinTargetC, kMaxTargetC);
+  ESP_LOGI("matter", "Thermostat request: mode=%u heat=%.2f C cool=%.2f C; sending %.2f C",
+           static_cast<unsigned>(toMatterMode(state.mode)), state.heatingSetpointC,
+           state.coolingSetpointC, target);
+  sHvac->queueCommand(state.mode, target);
   return ESP_OK;
 }
 
@@ -308,6 +321,9 @@ void publishHvacState(const hvac::State &state) {
       state.targetTemperatureC < kMinTargetC || state.targetTemperatureC > kMaxTargetC) {
     return;
   }
+
+  ESP_LOGI("matter", "Midea state: room=%.1f C target=%.1f C mode=%u", state.indoorTemperatureC,
+           state.targetTemperatureC, static_cast<unsigned>(toMatterMode(state.mode)));
 
   ThermostatState updated;
   portENTER_CRITICAL(&sStateMutex);
