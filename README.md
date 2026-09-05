@@ -121,16 +121,19 @@ Arduino, HomeSpan, Home Assistant, or cloud dependency.
 
 ## Build and flash
 
-Install Espressif's ESP-IDF 6.x and a compatible checkout of ESP-Matter, then
-activate ESP-IDF and point the project at ESP-Matter:
+Install Espressif's ESP-IDF 6.x and a compatible checkout of ESP-Matter. From
+the project root, load the supplied environment helper:
 
 ```sh
-source /path/to/esp-idf/export.sh
-export ESP_MATTER_PATH=/path/to/esp-matter
 cd mideamatter
+. ./env.sh
 idf.py build
 idf.py -p /dev/cu.usbmodemXXXX flash monitor
 ```
+
+`env.sh` defaults to ESP-IDF at `~/.espressif/v6.0.2/esp-idf` and ESP-Matter
+at `~/esp/esp-matter`. If yours are elsewhere, set `ESP_IDF_EXPORT` and/or
+`ESP_MATTER_PATH` before sourcing it.
 
 The supplied partition table reserves a 3.8 MB application partition, so use a
 4 MB XIAO ESP32-C6. The build has no Arduino or PlatformIO step.
