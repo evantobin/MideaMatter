@@ -34,10 +34,6 @@ class UartStream final : public dudanov::Stream {
   int read() override {
     uint8_t byte = 0;
     if (uart_read_bytes(kUart, &byte, 1, 0) == 1) {
-      // Keep this at info level while bringing up a new adapter. The bundled
-      // Midea library only logs completed frames at debug level, which makes a
-      // missing physical RX path otherwise indistinguishable from bad frames.
-      ESP_LOGI(kLogTag, "Midea UART RX: 0x%02X", byte);
       return byte;
     }
     return -1;

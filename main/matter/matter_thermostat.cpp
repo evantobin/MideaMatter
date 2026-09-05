@@ -272,7 +272,9 @@ bool begin(hvac::MideaHvac &hvac) {
 
   esp_matter::endpoint::room_air_conditioner::config_t config;
   config.on_off.on_off = false;
-  config.thermostat.local_temperature = nullable<int16_t>(2000);
+  // Do not present the 20 C (68 F) sample value before a real indoor-unit
+  // status frame has been received.
+  config.thermostat.local_temperature = nullable<int16_t>();
   config.thermostat.control_sequence_of_operation =
       static_cast<uint8_t>(Thermostat::ControlSequenceOfOperationEnum::kCoolingAndHeating);
   config.thermostat.system_mode = static_cast<uint8_t>(Thermostat::SystemModeEnum::kOff);
