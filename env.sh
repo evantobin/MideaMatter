@@ -23,7 +23,13 @@ if [ ! -f "$ESP_MATTER_PATH/export.sh" ]; then
 fi
 
 . "$ESP_MATTER_PATH/export.sh"
-idf.py set-target esp32c6
+
+# `idf.py set-target` clears generated build configuration. Run it only for a
+# fresh checkout or if this folder was previously configured for another chip;
+# ordinary `. ./env.sh` followed by `idf.py build` should stay incremental.
+if [ ! -f sdkconfig ] || ! grep -q '^CONFIG_IDF_TARGET="esp32c6"$' sdkconfig; then
+  idf.py set-target esp32c6
+fi
 
 echo "MideaMatter ESP32-C6 environment ready."
 echo "  idf.py build   — compile"

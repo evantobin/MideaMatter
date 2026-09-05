@@ -2,6 +2,7 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 #include <esp_event.h>
@@ -64,7 +65,12 @@ esp_err_t rootHandler(httpd_req_t *request) {
 }
 
 esp_err_t logsHandler(httpd_req_t *request) {
-  char snapshot[kLogBufferSize + 1];
+  // HTTP server tasks have a small stack. Keep this snapshot on the heap rather
+  // than placing the entire ring buffer on that stack.
+  char *snapshot = static_cast<char *>(malloc(kLogBufferSize + 1));
+  if (snapshot == nullptr) {
+    return httpd_resp_send_err(request, HTTPD_500_INTERNAL_SERVER_ERROR, "Out of memory");
+  }
   size_t length;
   portENTER_CRITICAL(&sLogMutex);
   length = sLogLength;
@@ -76,7 +82,9 @@ esp_err_t logsHandler(httpd_req_t *request) {
 
   httpd_resp_set_type(request, "text/plain; charset=utf-8");
   httpd_resp_set_hdr(request, "Cache-Control", "no-store");
-  return httpd_resp_send(request, snapshot, length);
+  const esp_err_t result = httpd_resp_send(request, snapshot, length);
+  free(snapshot);
+  return result;
 }
 
 void startServer(void *, esp_event_base_t, int32_t, void *) {
@@ -99,6 +107,10 @@ void startServer(void *, esp_event_base_t, int32_t, void *) {
 
 void begin() {
   sOriginalVprintf = esp_log_set_vprintf(logVprintf);
+  // This is deliberately written directly so the browser page proves the
+  // capture buffer works even if a particular ESP-IDF log backend is quiet.
+  constexpr char kCaptureStarted[] = "[web_log] Capture active; waiting for Wi-Fi.\n";
+  appendLog(kCaptureStarted, sizeof(kCaptureStarted) - 1);
   ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, startServer, nullptr));
   ESP_LOGI("web_log", "Web log capture enabled; waiting for Wi-Fi");
 }

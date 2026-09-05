@@ -4,6 +4,7 @@
 
 #include <driver/gpio.h>
 #include <driver/uart.h>
+#include <esp_log.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/portmacro.h>
 
@@ -11,6 +12,8 @@
 
 namespace hvac {
 namespace {
+
+constexpr const char *kLogTag = "hvac";
 
 constexpr uart_port_t kUart = UART_NUM_1;
 constexpr gpio_num_t kRxPin = GPIO_NUM_17;
@@ -163,6 +166,8 @@ void MideaHvac::poll() {
   portEXIT_CRITICAL(&sCommandMutex);
 
   if (command.pending) {
+    ESP_LOGI(kLogTag, "Sending Midea command: thermostat=%d fan=%d swing=%d",
+             command.thermostatUpdate, command.fanSpeedUpdate, command.swingUpdate);
     Control control;
     if (command.thermostatUpdate) {
       control.mode = toMideaMode(command.mode);
@@ -181,6 +186,7 @@ void MideaHvac::poll() {
 }
 
 void MideaHvac::queueCommand(Mode mode, float targetTemperatureC) {
+  ESP_LOGI(kLogTag, "Queued mode %d at %.1f C", static_cast<int>(mode), targetTemperatureC);
   portENTER_CRITICAL(&sCommandMutex);
   sPendingCommand.pending = true;
   sPendingCommand.thermostatUpdate = true;
@@ -190,6 +196,7 @@ void MideaHvac::queueCommand(Mode mode, float targetTemperatureC) {
 }
 
 void MideaHvac::queueFanSpeed(FanSpeed fanSpeed) {
+  ESP_LOGI(kLogTag, "Queued fan speed %d", static_cast<int>(fanSpeed));
   portENTER_CRITICAL(&sCommandMutex);
   sPendingCommand.pending = true;
   sPendingCommand.fanSpeedUpdate = true;
@@ -198,6 +205,7 @@ void MideaHvac::queueFanSpeed(FanSpeed fanSpeed) {
 }
 
 void MideaHvac::queueSwing(Swing swing) {
+  ESP_LOGI(kLogTag, "Queued swing %d", static_cast<int>(swing));
   portENTER_CRITICAL(&sCommandMutex);
   sPendingCommand.pending = true;
   sPendingCommand.swingUpdate = true;
