@@ -344,7 +344,7 @@ void printCommissioningInfo() {
     return;
   }
 
-  printf("\nSenville Heat Pump is ready for Matter commissioning.\n");
+  printf("\nMidea UART Matter controller is ready for commissioning.\n");
   printf("Manual pairing code: %s\n", manualCode);
   printf("QR payload: %s\n", qrPayload);
   printf("QR code URL: https://project-chip.github.io/connectedhomeip/qrcode.html?data=%s\n", qrPayload);

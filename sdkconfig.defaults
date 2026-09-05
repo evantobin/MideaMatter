@@ -1,5 +1,10 @@
 CONFIG_IDF_TARGET="esp32c6"
 CONFIG_USE_BLE_ONLY_FOR_COMMISSIONING=y
+# Keep Matter Wi-Fi commissioning enabled, but never compile a home network
+# into the firmware. The Matter controller supplies these at commissioning.
+CONFIG_ENABLE_WIFI_STATION=y
+CONFIG_DEFAULT_WIFI_SSID=""
+CONFIG_DEFAULT_WIFI_PASSWORD=""
 CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
 CONFIG_BT_ENABLED=y
 CONFIG_BT_NIMBLE_ENABLED=y

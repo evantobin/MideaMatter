@@ -98,6 +98,14 @@ Disconnect power to the indoor unit before opening it. Work only on the
 low-voltage Smart Kit connector; do not touch mains wiring or outdoor-unit
 terminals.
 
+> ## ⚠️ Never connect USB-C and the mini-split at the same time
+>
+> **Never plug the XIAO into a computer over USB-C while it is connected to a
+> powered mini-split Smart Kit port.** Both connections provide 5 V and can
+> back-feed one another. Use **USB-C only** for flashing and recording the
+> Matter QR code. Unplug USB-C completely before connecting the controller to
+> the mini-split; from then on, the Smart Kit port is its only power source.
+
 ## Wiring
 
 On the XIAO ESP32-C6, the UART uses **D6 / GPIO16** for TX and **D7 / GPIO17**
@@ -162,7 +170,8 @@ the project root, load the supplied environment helper:
 cd mideamatter
 . ./env.sh
 idf.py build
-idf.py -p /dev/cu.usbmodemXXXX flash monitor
+idf.py -p /dev/cu.usbmodemXXXX flash
+idf.py -p /dev/cu.usbmodemXXXX monitor
 ```
 
 `env.sh` defaults to ESP-IDF at `~/.espressif/v6.0.2/esp-idf` and ESP-Matter
@@ -174,25 +183,34 @@ The supplied partition table reserves a 3.8 MB application partition, so use a
 
 ## First boot and Matter pairing
 
-1. Open the ESP-IDF monitor at **115200 baud** immediately after flashing.
-2. If the device is uncommissioned, the firmware prints a manual pairing code
-   and a QR-code URL.
-3. In your Matter controller, choose its **Add Accessory** flow, then enter the
-   code or scan a QR code made from that URL.
-4. The controller supplies Wi-Fi credentials over BLE.
-5. Rename the thermostat and assign it to the right room.
+1. With the mini-split **not connected**, power the XIAO from USB-C and open the
+   ESP-IDF monitor at **115200 baud** after flashing.
+2. On first boot, the log prints a manual pairing code, a Matter QR payload, and
+   a QR-code URL. Open that URL in a browser, then **print or save the QR code**.
+   You need it after USB-C is disconnected.
+3. Disconnect USB-C completely. Do not connect it again while the Smart Kit
+   port is connected and powering the XIAO.
+4. Connect the controller to the mini-split Smart Kit port. That port now
+   provides its only power.
+5. In your Matter controller, choose **Add Accessory** and scan the saved or
+   printed Matter QR code (or enter the recorded manual code). The controller
+   passes Wi-Fi credentials to the C6 over BLE; they are stored in device flash,
+   never in this project or firmware image.
+6. Rename the thermostat and assign it to the right room.
 
 For a new home or Wi-Fi network during development, run `idf.py erase-flash`,
-flash again, then use the new pairing code shown in the monitor.
+flash again over **USB-C only**, and record the pairing code before reconnecting
+the mini-split.
 
 ## Bring-up checklist
 
-1. Flash and pair the ESP32-C6 before connecting it to the mini-split.
-2. Confirm it stays powered and visible in your Matter controller.
+1. Flash over USB-C and record or print the Matter QR code.
+2. Disconnect USB-C completely.
 3. With the mini-split unplugged, wire the level shifter and inspect every lead.
 4. Reconnect the mini-split, then connect ESP ground and UART wires.
 5. Wait a few seconds for MideaUART to discover the indoor unit.
-6. Test Cool, Heat, Off, and one setpoint change at a time.
+6. Pair from the saved/printed QR code, then test Cool, Heat, Off, and one
+   setpoint change at a time.
 7. Test the handheld remote and check that the Matter controller follows it.
 
 ## Pin and protocol settings
