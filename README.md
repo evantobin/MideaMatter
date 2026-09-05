@@ -1,8 +1,11 @@
-# Build a Matter thermostat for a Midea / Senville SENA/18HF
+# Build a Matter controller for Midea-UART mini-splits
 
-This is a direct, local controller for a Senville SENA/18HF mini-split. An
-ESP32-C6 replaces the `SEN20-ACK1T` Wi-Fi dongle, speaks the indoor unit's
-Midea UART protocol, and exposes a standard Matter thermostat.
+This is a direct, local controller for **Midea-UART-compatible** mini-splits.
+An ESP32-C6 replaces a compatible Smart Kit / Wi-Fi dongle, speaks the indoor
+unit's Midea UART protocol, and exposes a standard Matter thermostat. The
+Senville SENA/18HF with its `SEN20-ACK1T`-style Smart Kit port is the reference
+build for this guide; other compatible Midea-built and rebranded units are
+covered in [Which mini-splits are supported](#which-mini-splits-are-supported).
 
 No Home Assistant. No cloud account. No MQTT. No Wi-Fi password in source code.
 
@@ -141,8 +144,14 @@ mideamatter/
     └── MideaUART/             # bundled Midea protocol library
 ```
 
-The firmware uses native ESP-IDF and ESP-Matter plus MideaUART. There is no
-Arduino, HomeSpan, Home Assistant, or cloud dependency.
+The firmware uses native ESP-IDF and ESP-Matter plus the bundled MideaUART
+protocol implementation. It compiles MideaUART directly for the indoor-unit
+frame protocol, polling, status parsing, and control commands; this project
+does **not** reimplement that protocol. The code in `main/hvac/` is the
+ESP32-C6 UART and state bridge, while `main/matter/` maps that state to Matter
+thermostat, fan-speed, and swing controls.
+
+There is no Arduino runtime, HomeSpan, Home Assistant, or cloud dependency.
 
 ## Build and flash
 
