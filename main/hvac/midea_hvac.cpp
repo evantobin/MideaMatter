@@ -39,12 +39,23 @@ class UartStream final : public dudanov::Stream {
   int peek() override { return -1; }
 
   size_t write(uint8_t byte) override {
-    return uart_write_bytes(kUart, &byte, 1) == 1 ? 1 : 0;
+    const int written = uart_write_bytes(kUart, &byte, 1);
+    if (written == 1) {
+      ESP_LOGI(kLogTag, "Midea UART TX: 1 byte");
+      return 1;
+    }
+    ESP_LOGW(kLogTag, "Midea UART TX failed");
+    return 0;
   }
 
   size_t write(const uint8_t *data, size_t length) override {
     const int written = uart_write_bytes(kUart, data, length);
-    return written > 0 ? static_cast<size_t>(written) : 0;
+    if (written > 0) {
+      ESP_LOGI(kLogTag, "Midea UART TX: %d bytes", written);
+      return static_cast<size_t>(written);
+    }
+    ESP_LOGW(kLogTag, "Midea UART TX failed");
+    return 0;
   }
 
   void flush() override { uart_wait_tx_done(kUart, pdMS_TO_TICKS(100)); }
