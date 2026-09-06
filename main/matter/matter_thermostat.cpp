@@ -30,6 +30,7 @@ using namespace chip::app::Clusters;
 hvac::MideaHvac *sHvac = nullptr;
 uint16_t sEndpointId = 0;
 portMUX_TYPE sStateMutex = portMUX_INITIALIZER_UNLOCKED;
+bool sReportingMatterState = false;
 
 struct ThermostatState {
   hvac::Mode mode = hvac::Mode::Off;
@@ -113,7 +114,12 @@ void reportStateOnMatterThread(intptr_t) {
 
   if (sEndpointId == 0) return;
 
-  esp_matter_attr_val_t value = esp_matter_int16(centiDegrees(state.indoorTemperatureC));
+  // Attribute updates made here invoke the same pre-update callback used for
+  // controller writes. Do not treat our reflected Midea state as a new command.
+  sReportingMatterState = true;
+
+  esp_matter_attr_val_t value =
+      esp_matter_nullable_int16(nullable<int16_t>(centiDegrees(state.indoorTemperatureC)));
   esp_matter::attribute::update(
       sEndpointId, Thermostat::Id, Thermostat::Attributes::LocalTemperature::Id, &value);
 
@@ -140,6 +146,8 @@ void reportStateOnMatterThread(intptr_t) {
   value = esp_matter_int16(centiDegrees(state.coolingSetpointC));
   esp_matter::attribute::update(
       sEndpointId, Thermostat::Id, Thermostat::Attributes::OccupiedCoolingSetpoint::Id, &value);
+
+  sReportingMatterState = false;
 }
 
 void scheduleStateReport() {
@@ -169,7 +177,8 @@ esp_err_t attributeUpdateCallback(
     uint32_t attributeId,
     esp_matter_attr_val_t *value,
     void *) {
-  if (type != esp_matter::attribute::PRE_UPDATE || endpointId != sEndpointId || sHvac == nullptr) {
+  if (type != esp_matter::attribute::PRE_UPDATE || endpointId != sEndpointId || sHvac == nullptr ||
+      sReportingMatterState) {
     return ESP_OK;
   }
 
@@ -201,12 +210,18 @@ esp_err_t attributeUpdateCallback(
     return ESP_OK;
   }
 
+  bool setpointWasUpdated = false;
+  float updatedSetpointC = 0.0f;
   if (attributeId == Thermostat::Attributes::SystemMode::Id) {
     state.mode = toHvacMode(value->val.u8);
   } else if (attributeId == Thermostat::Attributes::OccupiedHeatingSetpoint::Id) {
     state.heatingSetpointC = value->val.i16 / 100.0f;
+    setpointWasUpdated = true;
+    updatedSetpointC = state.heatingSetpointC;
   } else if (attributeId == Thermostat::Attributes::OccupiedCoolingSetpoint::Id) {
     state.coolingSetpointC = value->val.i16 / 100.0f;
+    setpointWasUpdated = true;
+    updatedSetpointC = state.coolingSetpointC;
   } else {
     return ESP_OK;
   }
@@ -226,7 +241,11 @@ esp_err_t attributeUpdateCallback(
   } else if (state.mode == hvac::Mode::Cool) {
     target = state.coolingSetpointC;
   } else if (state.mode == hvac::Mode::Auto) {
-    target = (state.heatingSetpointC + state.coolingSetpointC) / 2.0f;
+    // The indoor unit has one Auto target while Matter exposes a heat/cool
+    // range. Apply the target the user actually just changed, rather than the
+    // midpoint of the range.
+    target = setpointWasUpdated ? updatedSetpointC
+                                : (state.heatingSetpointC + state.coolingSetpointC) / 2.0f;
   }
   target = std::clamp(target, kMinTargetC, kMaxTargetC);
   ESP_LOGI("matter", "Thermostat request: mode=%u heat=%.2f C cool=%.2f C; sending %.2f C",
