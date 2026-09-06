@@ -20,7 +20,10 @@ namespace {
 
 constexpr float kMinTargetC = 17.0f;
 constexpr float kMaxTargetC = 30.0f;
-constexpr float kAutoDeadbandC = 2.5f;
+// A Midea head has one target in Auto, whereas Matter requires separate heat
+// and cool targets. Keep the required Matter range as narrow as possible so
+// Home does not display an invented multi-degree "Cool to" target.
+constexpr float kAutoDeadbandC = 0.25f;
 constexpr const char *kManufacturer = "DIY";
 constexpr const char *kProductName = "Senville Heat Pump";
 constexpr const char *kModel = "SENA-18HF UART";
@@ -123,7 +126,7 @@ void reportStateOnMatterThread(intptr_t) {
   esp_matter::attribute::update(
       sEndpointId, Thermostat::Id, Thermostat::Attributes::LocalTemperature::Id, &value);
 
-  value = esp_matter_uint8(toMatterMode(state.mode));
+  value = esp_matter_enum8(toMatterMode(state.mode));
   esp_matter::attribute::update(
       sEndpointId, Thermostat::Id, Thermostat::Attributes::SystemMode::Id, &value);
 
@@ -131,11 +134,11 @@ void reportStateOnMatterThread(intptr_t) {
   esp_matter::attribute::update(
       sEndpointId, OnOff::Id, OnOff::Attributes::OnOff::Id, &value);
 
-  value = esp_matter_uint8(toMatterFanMode(state.fanSpeed));
+  value = esp_matter_enum8(toMatterFanMode(state.fanSpeed));
   esp_matter::attribute::update(
       sEndpointId, FanControl::Id, FanControl::Attributes::FanMode::Id, &value);
 
-  value = esp_matter_uint8(toMatterRockSetting(state.swing));
+  value = esp_matter_bitmap8(toMatterRockSetting(state.swing));
   esp_matter::attribute::update(
       sEndpointId, FanControl::Id, FanControl::Attributes::RockSetting::Id, &value);
 
@@ -202,7 +205,7 @@ esp_err_t attributeUpdateCallback(
   }
 
   if (clusterId == OnOff::Id && attributeId == OnOff::Attributes::OnOff::Id) {
-    sHvac->queueCommand(value->val.b ? hvac::Mode::Auto : hvac::Mode::Off, state.coolingSetpointC);
+    sHvac->queueCommand(value->val.b ? hvac::Mode::Cool : hvac::Mode::Off, state.coolingSetpointC);
     return ESP_OK;
   }
 
